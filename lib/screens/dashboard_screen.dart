@@ -9,6 +9,7 @@ import '../services/sensor_service.dart';
 import 'zones_screen.dart';
 import 'charts_screen.dart';
 import 'ai_analysis_screen.dart';
+import 'alerts_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -18,21 +19,14 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  // =====================================
   // COLORES DE AULASENSE
-  // =====================================
-
   static const Color fondo = Color(0xFF0D0B2B);
   static const Color tarjeta = Color(0xFF1D1B45);
   static const Color morado = Color(0xFF9333EA);
   static const Color moradoClaro = Color(0xFFB366FF);
 
-  // =====================================
   // SERVICIO Y MEDICIONES
-  // =====================================
-
   final SensorService _sensorService = SensorService();
-
   final Map<String, SensorReading> _mediciones = {};
 
   Timer? _temporizador;
@@ -47,7 +41,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     _actualizarMediciones();
 
-    // Actualizar automáticamente cada 30 segundos.
     _temporizador = Timer.periodic(
       const Duration(seconds: 30),
       (_) => _actualizarMediciones(),
@@ -60,10 +53,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.dispose();
   }
 
-  // =====================================
   // CONSULTAR MEDICIONES DEL BACKEND
-  // =====================================
-
   Future<void> _actualizarMediciones() async {
     if (_actualizando) return;
 
@@ -100,10 +90,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  // =====================================
   // FORMATEAR MEDICIONES
-  // =====================================
-
   String _temperatura(String codigo) {
     final lectura = _mediciones[codigo];
 
@@ -128,10 +115,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return lectura.iluminacion.toStringAsFixed(0);
   }
 
-  // =====================================
   // NAVEGACIÓN
-  // =====================================
-
   void _abrirZonas() {
     Navigator.push(
       context,
@@ -159,38 +143,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  // CENTRO DE ALERTAS AMBIENTALES
+  void _abrirAlertas() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const AlertsScreen(),
+      ),
+    );
+  }
+
   void _navegar(int index) {
     switch (index) {
       case 0:
         break;
-
       case 1:
         _abrirZonas();
         break;
-
       case 2:
         _abrirGraficas();
         break;
-
       case 3:
         _abrirAnalisisIA();
         break;
     }
   }
 
-  // =====================================
   // PANTALLA PRINCIPAL
-  // =====================================
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: fondo,
 
-      // =====================================
       // ENCABEZADO
-      // =====================================
-
       appBar: AppBar(
         backgroundColor: fondo,
         foregroundColor: Colors.white,
@@ -214,11 +199,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
 
         actions: [
+          // CAMPANITA DE ALERTAS
+          IconButton(
+            icon: const Icon(
+              Icons.notifications_active_outlined,
+              color: moradoClaro,
+            ),
+            tooltip: 'Centro de alertas ambientales',
+            onPressed: _abrirAlertas,
+          ),
+
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Actualizar mediciones',
             onPressed: _actualizarMediciones,
           ),
+
           IconButton(
             icon: const Icon(Icons.person_outline),
             tooltip: 'Perfil',
@@ -233,10 +229,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
 
-      // =====================================
       // CONTENIDO PRINCIPAL
-      // =====================================
-
       body: RefreshIndicator(
         onRefresh: _actualizarMediciones,
         color: morado,
@@ -284,7 +277,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                   const SizedBox(height: 25),
 
-                  // ESTADO DE CONEXIÓN
                   _estadoConexion(),
 
                   const SizedBox(height: 25),
@@ -299,10 +291,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ),
 
-                  // =====================================
                   // TARJETAS DE LAS TRES ZONAS
-                  // =====================================
-
                   LayoutBuilder(
                     builder: (context, constraints) {
                       final double ancho = constraints.maxWidth;
@@ -351,10 +340,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                   const SizedBox(height: 30),
 
-                  // =====================================
                   // AVISO INFORMATIVO
-                  // =====================================
-
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
@@ -396,21 +382,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                   const SizedBox(height: 20),
 
-                  // =====================================
                   // BOTÓN VER TODAS LAS ZONAS
-                  // =====================================
-
                   SizedBox(
                     width: double.infinity,
                     height: 50,
 
                     child: ElevatedButton.icon(
                       onPressed: _abrirZonas,
-
                       icon: const Icon(
                         Icons.location_on_outlined,
                       ),
-
                       label: const Text(
                         'Ver todas las zonas',
                         style: TextStyle(
@@ -429,6 +410,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
 
+                  const SizedBox(height: 15),
+
+                  // BOTÓN CENTRO DE ALERTAS
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+
+                    child: OutlinedButton.icon(
+                      onPressed: _abrirAlertas,
+
+                      icon: const Icon(
+                        Icons.notifications_active_outlined,
+                      ),
+
+                      label: const Text(
+                        'Centro de alertas ambientales',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: moradoClaro,
+                        side: const BorderSide(
+                          color: morado,
+                          width: 1.5,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+
                   const SizedBox(height: 20),
                 ],
               ),
@@ -437,10 +453,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
       ),
 
-      // =====================================
       // BARRA DE NAVEGACIÓN INFERIOR
-      // =====================================
-
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: 0,
         type: BottomNavigationBarType.fixed,
@@ -481,10 +494,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // =====================================
   // ESTADO DE CONEXIÓN
-  // =====================================
-
   Widget _estadoConexion() {
     if (_error != null) {
       return Container(
@@ -549,10 +559,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // =====================================
   // TARJETAS DE LAS ZONAS
-  // =====================================
-
   Widget _tarjetaZona({
     required double ancho,
     required String zona,
@@ -669,10 +676,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // =====================================
   // DISEÑO DE CADA MEDICIÓN
-  // =====================================
-
   Widget _medicion(
     IconData icono,
     String titulo,
