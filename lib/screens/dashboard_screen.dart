@@ -1,4 +1,3 @@
-
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -9,6 +8,9 @@ import '../services/sensor_service.dart';
 import 'zones_screen.dart';
 import 'charts_screen.dart';
 import 'ai_analysis_screen.dart';
+import 'profile_screen.dart';
+import '../services/profile_settings.dart';
+import '../widgets/aula_components.dart';
 import 'alerts_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -20,10 +22,12 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   // COLORES DE AULASENSE
-  static const Color fondo = Color(0xFF0D0B2B);
-  static const Color tarjeta = Color(0xFF1D1B45);
-  static const Color morado = Color(0xFF9333EA);
-  static const Color moradoClaro = Color(0xFFB366FF);
+  // =====================================
+
+  static const Color fondo = AulaStyle.background;
+  static const Color tarjeta = AulaStyle.card;
+  static const Color morado = AulaStyle.purple;
+  static const Color moradoClaro = AulaStyle.lightPurple;
 
   // SERVICIO Y MEDICIONES
   final SensorService _sensorService = SensorService();
@@ -39,6 +43,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
 
+    ProfileSettings.instance.addListener(_preferenciasActualizadas);
     _actualizarMediciones();
 
     _temporizador = Timer.periodic(
@@ -49,11 +54,72 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   void dispose() {
+    ProfileSettings.instance.removeListener(_preferenciasActualizadas);
     _temporizador?.cancel();
     super.dispose();
   }
 
   // CONSULTAR MEDICIONES DEL BACKEND
+  // =====================================
+
+  void _preferenciasActualizadas() {
+    if (mounted) setState(() {});
+  }
+
+  final Set<String> _avisosActivos = {};
+
+  void _comprobarAvisos() {
+    final s = ProfileSettings.instance;
+    final activos = <String>{};
+    final mensajes = <String>[];
+    for (final codigo in s.favorites) {
+      final lectura = _mediciones[codigo];
+      if (lectura == null) continue;
+      final mediciones = [
+        (
+          'temperatura',
+          s.temperatureAlerts,
+          lectura.temperatura,
+          s.minTemperature,
+          s.maxTemperature,
+        ),
+        (
+          'humedad',
+          s.humidityAlerts,
+          lectura.humedad,
+          s.minHumidity,
+          s.maxHumidity,
+        ),
+        (
+          'iluminación',
+          s.lightAlerts,
+          lectura.iluminacion,
+          s.minLight,
+          s.maxLight,
+        ),
+      ];
+      for (final (nombre, habilitado, valor, minimo, maximo) in mediciones) {
+        if (habilitado && (valor < minimo || valor > maximo)) {
+          final clave = '$codigo:$nombre';
+          activos.add(clave);
+          if (!_avisosActivos.contains(clave)) {
+            mensajes.add(
+              '${ProfileSettings.zones[codigo]}: $nombre fuera de rango',
+            );
+          }
+        }
+      }
+    }
+    if (ModalRoute.of(context)?.isCurrent != true) return;
+    _avisosActivos
+      ..clear()
+      ..addAll(activos);
+    if (mensajes.isNotEmpty) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(mensajes.join('\n'))));
+    }
+  }
+
   Future<void> _actualizarMediciones() async {
     if (_actualizando) return;
 
@@ -76,6 +142,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _error = null;
         _cargando = false;
       });
+      _comprobarAvisos();
     } catch (e) {
       if (!mounted) return;
 
@@ -119,27 +186,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void _abrirZonas() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const ZonesScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const ZonesScreen()),
     );
   }
 
   void _abrirGraficas() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const ChartsScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const ChartsScreen()),
     );
   }
 
   void _abrirAnalisisIA() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const AIAnalysisScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const AIAnalysisScreen()),
     );
   }
 
@@ -176,6 +237,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       backgroundColor: fondo,
 
       // ENCABEZADO
+      // =====================================
       appBar: AppBar(
         backgroundColor: fondo,
         foregroundColor: Colors.white,
@@ -183,17 +245,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
         title: const Row(
           children: [
-            Icon(
-              Icons.cloud_outlined,
-              color: moradoClaro,
-            ),
+            Icon(Icons.cloud_outlined, color: moradoClaro),
             SizedBox(width: 10),
             Text(
               'AulaSense',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: moradoClaro,
-              ),
+              style: TextStyle(fontWeight: FontWeight.bold, color: moradoClaro),
             ),
           ],
         ),
@@ -218,18 +274,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
           IconButton(
             icon: const Icon(Icons.person_outline),
             tooltip: 'Perfil',
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Perfil próximamente'),
-                ),
-              );
-            },
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute<void>(builder: (_) => const ProfileScreen()),
+            ),
           ),
         ],
       ),
 
       // CONTENIDO PRINCIPAL
+      // =====================================
       body: RefreshIndicator(
         onRefresh: _actualizarMediciones,
         color: morado,
@@ -248,10 +302,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 children: [
                   const Text(
                     'Monitoreo ambiental',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 16,
-                    ),
+                    style: TextStyle(color: Colors.white70, fontSize: 16),
                   ),
 
                   const SizedBox(height: 25),
@@ -269,10 +320,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                   const Text(
                     'Condiciones ambientales del salón de clases',
-                    style: TextStyle(
-                      color: Colors.white60,
-                      fontSize: 14,
-                    ),
+                    style: TextStyle(color: Colors.white60, fontSize: 14),
                   ),
 
                   const SizedBox(height: 25),
@@ -285,13 +333,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     const Center(
                       child: Padding(
                         padding: EdgeInsets.all(20),
-                        child: CircularProgressIndicator(
-                          color: moradoClaro,
-                        ),
+                        child: CircularProgressIndicator(color: moradoClaro),
                       ),
                     ),
 
                   // TARJETAS DE LAS TRES ZONAS
+                  // =====================================
                   LayoutBuilder(
                     builder: (context, constraints) {
                       final double ancho = constraints.maxWidth;
@@ -299,8 +346,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       final int columnas = ancho >= 850
                           ? 3
                           : ancho >= 550
-                              ? 2
-                              : 1;
+                          ? 2
+                          : 1;
 
                       final double anchoTarjeta =
                           (ancho - (columnas - 1) * 16) / columnas;
@@ -310,29 +357,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         runSpacing: 16,
 
                         children: [
-                          _tarjetaZona(
-                            ancho: anchoTarjeta,
-                            zona: 'Zona Central (C)',
-                            codigo: 'C',
-                            color: Colors.greenAccent,
-                            icono: Icons.home_outlined,
-                          ),
-
-                          _tarjetaZona(
-                            ancho: anchoTarjeta,
-                            zona: 'Zona S1',
-                            codigo: 'S1',
-                            color: Colors.purpleAccent,
-                            icono: Icons.sensors,
-                          ),
-
-                          _tarjetaZona(
-                            ancho: anchoTarjeta,
-                            zona: 'Zona S2',
-                            codigo: 'S2',
-                            color: Colors.orangeAccent,
-                            icono: Icons.sensors,
-                          ),
+                          for (final codigo in _ordenZonas())
+                            _tarjetaZona(
+                              ancho: anchoTarjeta,
+                              zona: ProfileSettings.zones[codigo]!,
+                              codigo: codigo,
+                              color: codigo == 'C'
+                                  ? Colors.greenAccent
+                                  : codigo == 'S1'
+                                  ? Colors.purpleAccent
+                                  : Colors.orangeAccent,
+                              icono: codigo == 'C'
+                                  ? Icons.home_outlined
+                                  : Icons.sensors,
+                            ),
                         ],
                       );
                     },
@@ -341,6 +379,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   const SizedBox(height: 30),
 
                   // AVISO INFORMATIVO
+                  // =====================================
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
@@ -348,18 +387,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     decoration: BoxDecoration(
                       color: tarjeta,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: morado.withAlpha(102),
-                      ),
+                      border: Border.all(color: morado.withAlpha(102)),
                     ),
 
                     child: const Row(
                       children: [
-                        Icon(
-                          Icons.info_outline,
-                          color: moradoClaro,
-                          size: 26,
-                        ),
+                        Icon(Icons.info_outline, color: moradoClaro, size: 26),
 
                         SizedBox(width: 12),
 
@@ -383,15 +416,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   const SizedBox(height: 20),
 
                   // BOTÓN VER TODAS LAS ZONAS
+                  // =====================================
                   SizedBox(
                     width: double.infinity,
                     height: 50,
 
                     child: ElevatedButton.icon(
                       onPressed: _abrirZonas,
-                      icon: const Icon(
-                        Icons.location_on_outlined,
-                      ),
+
+                      icon: const Icon(Icons.location_on_outlined),
+
                       label: const Text(
                         'Ver todas las zonas',
                         style: TextStyle(
@@ -454,47 +488,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
 
       // BARRA DE NAVEGACIÓN INFERIOR
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 0,
-        type: BottomNavigationBarType.fixed,
-
-        backgroundColor: tarjeta,
-        selectedItemColor: moradoClaro,
-        unselectedItemColor: Colors.white54,
-        showUnselectedLabels: true,
-
-        onTap: _navegar,
-
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Inicio',
-          ),
-
-          BottomNavigationBarItem(
-            icon: Icon(Icons.location_on_outlined),
-            activeIcon: Icon(Icons.location_on),
-            label: 'Zonas',
-          ),
-
-          BottomNavigationBarItem(
-            icon: Icon(Icons.bar_chart_outlined),
-            activeIcon: Icon(Icons.bar_chart),
-            label: 'Gráficas',
-          ),
-
-          BottomNavigationBarItem(
-            icon: Icon(Icons.psychology_outlined),
-            activeIcon: Icon(Icons.psychology),
-            label: 'Análisis IA',
-          ),
-        ],
-      ),
+      // =====================================
+      bottomNavigationBar: AulaNavigation(currentIndex: 0, onTap: _navegar),
     );
   }
 
   // ESTADO DE CONEXIÓN
+  // =====================================
+
+  List<String> _ordenZonas() {
+    final primera = ProfileSettings.instance.firstZone;
+    return [
+      ?primera,
+      ...['C', 'S1', 'S2'].where((codigo) => codigo != primera),
+    ];
+  }
+
   Widget _estadoConexion() {
     if (_error != null) {
       return Container(
@@ -504,17 +513,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         decoration: BoxDecoration(
           color: Colors.redAccent.withAlpha(25),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: Colors.redAccent.withAlpha(100),
-          ),
+          border: Border.all(color: Colors.redAccent.withAlpha(100)),
         ),
 
         child: const Row(
           children: [
-            Icon(
-              Icons.error_outline,
-              color: Colors.redAccent,
-            ),
+            Icon(Icons.error_outline, color: Colors.redAccent),
 
             SizedBox(width: 10),
 
@@ -522,10 +526,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Text(
                 'No se pudo conectar con el backend. '
                 'Se conservarán las últimas mediciones disponibles.',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 13,
-                ),
+                style: TextStyle(color: Colors.white, fontSize: 13),
               ),
             ),
           ],
@@ -548,11 +549,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _cargando
                 ? 'Consultando mediciones...'
                 : 'Consulta mediante API REST · '
-                    'Actualización cada 30 segundos',
-            style: const TextStyle(
-              color: Colors.greenAccent,
-              fontSize: 13,
-            ),
+                      'Actualización cada 30 segundos',
+            style: const TextStyle(color: Colors.greenAccent, fontSize: 13),
           ),
         ),
       ],
@@ -581,10 +579,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         color: tarjeta,
         borderRadius: BorderRadius.circular(16),
 
-        border: Border.all(
-          color: color.withAlpha(153),
-          width: 1.5,
-        ),
+        border: Border.all(color: color.withAlpha(153), width: 1.5),
       ),
 
       child: Column(
@@ -593,11 +588,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         children: [
           Row(
             children: [
-              Icon(
-                icono,
-                color: color,
-                size: 26,
-              ),
+              Icon(icono, color: color, size: 26),
 
               const SizedBox(width: 8),
 
@@ -629,9 +620,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(width: 6),
 
               Text(
-                lectura != null
-                    ? 'Medición disponible'
-                    : 'Esperando medición',
+                lectura != null ? 'Medición disponible' : 'Esperando medición',
                 style: TextStyle(
                   color: lectura != null
                       ? Colors.greenAccent
@@ -677,12 +666,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // DISEÑO DE CADA MEDICIÓN
-  Widget _medicion(
-    IconData icono,
-    String titulo,
-    String valor,
-    Color color,
-  ) {
+  // =====================================
+
+  Widget _medicion(IconData icono, String titulo, String valor, Color color) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
 
@@ -691,11 +677,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           mainAxisSize: MainAxisSize.min,
 
           children: [
-            Icon(
-              icono,
-              color: color,
-              size: 20,
-            ),
+            Icon(icono, color: color, size: 20),
 
             const SizedBox(width: 5),
 
@@ -714,10 +696,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
         Text(
           titulo,
-          style: const TextStyle(
-            color: Colors.white60,
-            fontSize: 12,
-          ),
+          style: const TextStyle(color: Colors.white60, fontSize: 12),
         ),
       ],
     );
