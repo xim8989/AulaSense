@@ -1,10 +1,14 @@
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 
 import '../models/sensor_reading.dart';
 import '../services/sensor_service.dart';
+
 import 'zones_screen.dart';
+import 'charts_screen.dart';
+import 'ai_analysis_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -57,7 +61,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // =====================================
-  // CONSULTAR EL BACKEND
+  // CONSULTAR MEDICIONES DEL BACKEND
   // =====================================
 
   Future<void> _actualizarMediciones() async {
@@ -96,6 +100,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  // =====================================
+  // FORMATEAR MEDICIONES
+  // =====================================
+
   String _temperatura(String codigo) {
     final lectura = _mediciones[codigo];
 
@@ -118,6 +126,56 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (lectura == null) return '--';
 
     return lectura.iluminacion.toStringAsFixed(0);
+  }
+
+  // =====================================
+  // NAVEGACIÓN
+  // =====================================
+
+  void _abrirZonas() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ZonesScreen(),
+      ),
+    );
+  }
+
+  void _abrirGraficas() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ChartsScreen(),
+      ),
+    );
+  }
+
+  void _abrirAnalisisIA() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const AIAnalysisScreen(),
+      ),
+    );
+  }
+
+  void _navegar(int index) {
+    switch (index) {
+      case 0:
+        break;
+
+      case 1:
+        _abrirZonas();
+        break;
+
+      case 2:
+        _abrirGraficas();
+        break;
+
+      case 3:
+        _abrirAnalisisIA();
+        break;
+    }
   }
 
   // =====================================
@@ -226,7 +284,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                   const SizedBox(height: 25),
 
-                  // ESTADO DE LA CONEXIÓN
+                  // ESTADO DE CONEXIÓN
                   _estadoConexion(),
 
                   const SizedBox(height: 25),
@@ -347,15 +405,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     height: 50,
 
                     child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                const ZonesScreen(),
-                          ),
-                        );
-                      },
+                      onPressed: _abrirZonas,
 
                       icon: const Icon(
                         Icons.location_on_outlined,
@@ -400,36 +450,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         unselectedItemColor: Colors.white54,
         showUnselectedLabels: true,
 
-        onTap: (index) {
-          if (index == 0) {
-            return;
-          }
-
-          if (index == 1) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const ZonesScreen(),
-              ),
-            );
-          } else if (index == 2) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Pantalla de gráficas próximamente',
-                ),
-              ),
-            );
-          } else if (index == 3) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Pantalla de alertas próximamente',
-                ),
-              ),
-            );
-          }
-        },
+        onTap: _navegar,
 
         items: const [
           BottomNavigationBarItem(
@@ -451,9 +472,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
 
           BottomNavigationBarItem(
-            icon: Icon(Icons.notifications_outlined),
-            activeIcon: Icon(Icons.notifications),
-            label: 'Alertas',
+            icon: Icon(Icons.psychology_outlined),
+            activeIcon: Icon(Icons.psychology),
+            label: 'Análisis IA',
           ),
         ],
       ),

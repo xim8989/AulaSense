@@ -1,6 +1,10 @@
+
+//
 // ==========================================
 // AULASENSE - BACKEND NODE.JS
+// CON RECOMENDACIONES PERSONALIZADAS
 // ==========================================
+//
 
 // LIBRERÍAS
 const express = require('express');
@@ -9,6 +13,9 @@ const fs = require('fs');
 const path = require('path');
 
 require('dotenv').config();
+
+// MOTOR DE RECOMENDACIONES
+const { analizarAmbiente } = require('./recomendaciones');
 
 // ==========================================
 // CONFIGURACIÓN DEL SERVIDOR
@@ -26,17 +33,18 @@ const PORT = process.env.PORT || 3000;
 // ==========================================
 
 const carpetaDatos = path.join(__dirname, 'data');
+
 const archivoMediciones = path.join(
   carpetaDatos,
   'mediciones.json'
 );
 
-// Crear la carpeta si no existe
+// Crear carpeta si no existe
 if (!fs.existsSync(carpetaDatos)) {
   fs.mkdirSync(carpetaDatos, { recursive: true });
 }
 
-// Crear el archivo si no existe
+// Crear archivo si no existe
 if (!fs.existsSync(archivoMediciones)) {
   fs.writeFileSync(
     archivoMediciones,
@@ -46,7 +54,7 @@ if (!fs.existsSync(archivoMediciones)) {
 }
 
 // ==========================================
-// FUNCIONES PARA GUARDAR Y LEER EL HISTORIAL
+// FUNCIONES DEL HISTORIAL
 // ==========================================
 
 function leerHistorial() {
@@ -75,11 +83,14 @@ function guardarHistorial(historial) {
     'utf8'
   );
 
-  fs.renameSync(archivoTemporal, archivoMediciones);
+  fs.renameSync(
+    archivoTemporal,
+    archivoMediciones
+  );
 }
 
 // ==========================================
-// MEDICIONES INICIALES DE DEMOSTRACIÓN
+// MEDICIONES DE DEMOSTRACIÓN
 // ==========================================
 
 let mediciones = {
@@ -112,9 +123,10 @@ let mediciones = {
 try {
   const historialGuardado = leerHistorial();
 
-  // Recuperar la última medición de cada zona
   for (const registro of historialGuardado) {
-    const zona = String(registro.zona || '').toUpperCase();
+    const zona = String(
+      registro.zona || ''
+    ).toUpperCase();
 
     if (
       Object.prototype.hasOwnProperty.call(mediciones, zona) &&
@@ -152,7 +164,8 @@ app.get('/', (req, res) => {
   res.json({
     aplicacion: 'AulaSense',
     mensaje: 'Backend funcionando correctamente',
-    estado: 'activo'
+    estado: 'activo',
+    recomendaciones: 'habilitadas'
   });
 });
 
@@ -194,9 +207,13 @@ app.get('/api/historial', (req, res) => {
 // ==========================================
 
 app.get('/api/historial/:zona', (req, res) => {
-  const zona = String(req.params.zona).toUpperCase();
+  const zona = String(
+    req.params.zona
+  ).toUpperCase();
 
-  if (!Object.prototype.hasOwnProperty.call(mediciones, zona)) {
+  if (
+    !Object.prototype.hasOwnProperty.call(mediciones, zona)
+  ) {
     return res.status(404).json({
       error: 'Zona no encontrada.'
     });
@@ -206,11 +223,12 @@ app.get('/api/historial/:zona', (req, res) => {
     const historial = leerHistorial();
 
     const historialZona = historial.filter(
-      (registro) => registro.zona === zona
+      (registro) =>
+        String(registro.zona || '').toUpperCase() === zona
     );
 
     res.json({
-      zona: zona,
+      zona,
       total: historialZona.length,
       mediciones: historialZona
     });
@@ -229,26 +247,30 @@ app.get('/api/historial/:zona', (req, res) => {
 // ==========================================
 
 app.get('/api/mediciones/:zona', (req, res) => {
-  const zona = String(req.params.zona).toUpperCase();
+  const zona = String(
+    req.params.zona
+  ).toUpperCase();
 
-  if (!Object.prototype.hasOwnProperty.call(mediciones, zona)) {
+  if (
+    !Object.prototype.hasOwnProperty.call(mediciones, zona)
+  ) {
     return res.status(404).json({
       error: 'Zona no encontrada'
     });
   }
 
   res.json({
-    zona: zona,
+    zona,
     medicion: mediciones[zona]
   });
 });
 
 // ==========================================
-// RECIBIR MEDICIONES
+// RECIBIR Y GUARDAR MEDICIONES
 // ==========================================
 
-// Esta ruta permitirá recibir datos del Photon
-// a través de Particle Cloud en una etapa posterior.
+// En el futuro, esta ruta podrá recibir
+// mediciones provenientes del Particle Photon.
 
 app.post('/api/mediciones', (req, res) => {
   const {
@@ -258,16 +280,20 @@ app.post('/api/mediciones', (req, res) => {
     iluminacion
   } = req.body || {};
 
-  const codigo = String(zona || '').toUpperCase();
+  const codigo = String(
+    zona || ''
+  ).toUpperCase();
 
-  // VALIDAR QUE LA ZONA EXISTA
-  if (!Object.prototype.hasOwnProperty.call(mediciones, codigo)) {
+  // Validar zona
+  if (
+    !Object.prototype.hasOwnProperty.call(mediciones, codigo)
+  ) {
     return res.status(400).json({
       error: 'Zona no válida. Utiliza C, S1 o S2.'
     });
   }
 
-  // VALIDAR LOS VALORES RECIBIDOS
+  // Validar valores
   if (
     typeof temperatura !== 'number' ||
     !Number.isFinite(temperatura) ||
@@ -277,20 +303,21 @@ app.post('/api/mediciones', (req, res) => {
     !Number.isFinite(iluminacion)
   ) {
     return res.status(400).json({
-      error: 'La temperatura, humedad e iluminación deben ser números válidos.'
+      error:
+        'La temperatura, humedad e iluminación deben ser números válidos.'
     });
   }
 
-  // CREAR NUEVA MEDICIÓN
+  // Crear medición
   const nuevaMedicion = {
     zona: codigo,
-    temperatura: temperatura,
-    humedad: humedad,
-    iluminacion: iluminacion,
+    temperatura,
+    humedad,
+    iluminacion,
     fecha: new Date().toISOString()
   };
 
-  // GUARDAR EN EL HISTORIAL
+  // Guardar en historial
   try {
     const historial = leerHistorial();
 
@@ -309,7 +336,7 @@ app.post('/api/mediciones', (req, res) => {
     });
   }
 
-  // ACTUALIZAR LA MEDICIÓN ACTUAL
+  // Actualizar última medición
   mediciones[codigo] = {
     temperatura: nuevaMedicion.temperatura,
     humedad: nuevaMedicion.humedad,
@@ -322,12 +349,103 @@ app.post('/api/mediciones', (req, res) => {
     nuevaMedicion
   );
 
-  // CONFIRMAR QUE SE RECIBIÓ
   res.json({
     mensaje: 'Medición recibida y guardada correctamente',
     zona: codigo,
     medicion: mediciones[codigo]
   });
+});
+
+// ==========================================
+// RECOMENDACIONES INTELIGENTES POR SALÓN
+// ==========================================
+
+app.get('/api/ia/recomendaciones/:zona', (req, res) => {
+  const zona = String(
+    req.params.zona
+  ).toUpperCase();
+
+  // Validar que exista el salón
+  if (
+    !Object.prototype.hasOwnProperty.call(mediciones, zona)
+  ) {
+    return res.status(404).json({
+      error: 'Zona no encontrada. Utiliza C, S1 o S2.'
+    });
+  }
+
+  try {
+    // Obtener medición actual
+    const medicion = mediciones[zona];
+
+    // Obtener actividad seleccionada
+    const actividad =
+      typeof req.query.actividad === 'string'
+        ? req.query.actividad
+        : 'general';
+
+    // Generar recomendaciones personalizadas
+    const resultado = analizarAmbiente(
+      zona,
+      medicion,
+      actividad
+    );
+
+    // Devolver análisis
+    res.json(resultado);
+
+  } catch (error) {
+    console.error(
+      'Error en el análisis inteligente:',
+      error.message
+    );
+
+    res.status(500).json({
+      error: 'No se pudo generar el análisis ambiental.'
+    });
+  }
+});
+
+// ==========================================
+// RECOMENDACIONES DE TODOS LOS SALONES
+// ==========================================
+
+app.get('/api/ia/recomendaciones', (req, res) => {
+  try {
+    const resultados = {};
+
+    // Una misma actividad para las tres zonas
+    const actividad =
+      typeof req.query.actividad === 'string'
+        ? req.query.actividad
+        : 'general';
+
+    for (const zona of Object.keys(mediciones)) {
+      resultados[zona] = analizarAmbiente(
+        zona,
+        mediciones[zona],
+        actividad
+      );
+    }
+
+    res.json({
+      aplicacion: 'AulaSense',
+      tipoAnalisis: 'Reglas de referencia personalizadas',
+      actividad: resultados.C.actividad,
+      totalZonas: Object.keys(resultados).length,
+      resultados
+    });
+
+  } catch (error) {
+    console.error(
+      'Error al analizar las zonas:',
+      error.message
+    );
+
+    res.status(500).json({
+      error: 'No se pudieron generar las recomendaciones.'
+    });
+  }
 });
 
 // ==========================================
@@ -341,5 +459,6 @@ app.listen(PORT, () => {
   console.log(`Servidor funcionando en puerto ${PORT}`);
   console.log(`API disponible en http://localhost:${PORT}`);
   console.log('Historial de mediciones habilitado');
+  console.log('Recomendaciones inteligentes habilitadas');
   console.log('====================================');
-}); 
+});
