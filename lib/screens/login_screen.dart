@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+
 import 'register_screen.dart';
 import 'dashboard_screen.dart';
+import '../services/profile_settings.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -38,10 +40,7 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(
-          color: Color(0xFF9333EA),
-          width: 2,
-        ),
+        borderSide: const BorderSide(color: Color(0xFF9333EA), width: 2),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -49,10 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(
-          color: Colors.redAccent,
-          width: 2,
-        ),
+        borderSide: const BorderSide(color: Colors.redAccent, width: 2),
       ),
     );
   }
@@ -60,13 +56,12 @@ class _LoginScreenState extends State<LoginScreen> {
   // NAVEGAR AL DASHBOARD
   void iniciarSesion() {
     if (_formKey.currentState!.validate()) {
+      ProfileSettings.instance.signIn(correoController.text);
       // Navegación de demostración.
       // Todavía no se verifican usuarios ni contraseñas.
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (context) => const DashboardScreen(),
-        ),
+        MaterialPageRoute(builder: (context) => const DashboardScreen()),
       );
     }
   }
@@ -75,17 +70,14 @@ class _LoginScreenState extends State<LoginScreen> {
   void irRegistro() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const RegisterScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const RegisterScreen()),
     );
   }
 
   // MENSAJES PROVISIONALES
   void mostrarMensaje(String mensaje) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(mensaje)),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(mensaje)));
   }
 
   @override
@@ -144,10 +136,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   const Text(
                     'Inicia sesión para continuar',
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: Colors.white70,
-                    ),
+                    style: TextStyle(fontSize: 15, color: Colors.white70),
                   ),
 
                   const SizedBox(height: 30),
@@ -166,9 +155,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         return 'Ingresa tu correo';
                       }
 
-                      if (!RegExp(
-                        r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
-                      ).hasMatch(value.trim())) {
+                      if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+                          .hasMatch(value.trim())) {
                         return 'Ingresa un correo válido';
                       }
 
@@ -184,24 +172,25 @@ class _LoginScreenState extends State<LoginScreen> {
                     obscureText: ocultarPassword,
                     style: const TextStyle(color: Colors.white),
 
-                    decoration: decoracionCampo(
-                      'Contraseña',
-                      Icons.lock_outline,
-                    ).copyWith(
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          ocultarPassword
-                              ? Icons.visibility_off
-                              : Icons.visibility,
-                          color: Colors.white70,
+                    decoration:
+                        decoracionCampo(
+                          'Contraseña',
+                          Icons.lock_outline,
+                        ).copyWith(
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              ocultarPassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                              color: Colors.white70,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                ocultarPassword = !ocultarPassword;
+                              });
+                            },
+                          ),
                         ),
-                        onPressed: () {
-                          setState(() {
-                            ocultarPassword = !ocultarPassword;
-                          });
-                        },
-                      ),
-                    ),
 
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -218,15 +207,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: () {
-                        mostrarMensaje(
-                          'Recuperación de contraseña pendiente',
-                        );
+                        mostrarMensaje('Recuperación de contraseña pendiente');
                       },
                       child: const Text(
                         '¿Olvidaste tu contraseña?',
-                        style: TextStyle(
-                          color: Color(0xFFB366FF),
-                        ),
+                        style: TextStyle(color: Color(0xFFB366FF)),
                       ),
                     ),
                   ),
@@ -262,9 +247,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   // SEPARADOR
                   const Row(
                     children: [
-                      Expanded(
-                        child: Divider(color: Colors.white24),
-                      ),
+                      Expanded(child: Divider(color: Colors.white24)),
                       Padding(
                         padding: EdgeInsets.symmetric(horizontal: 15),
                         child: Text(
@@ -272,9 +255,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           style: TextStyle(color: Colors.white70),
                         ),
                       ),
-                      Expanded(
-                        child: Divider(color: Colors.white24),
-                      ),
+                      Expanded(child: Divider(color: Colors.white24)),
                     ],
                   ),
 
@@ -311,8 +292,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 30),
 
                   // REGISTRARSE
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       const Text(
                         '¿No tienes cuenta?',
